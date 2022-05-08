@@ -1,0 +1,2 @@
+from app.handlers.introduction import register_introduction_handlers
+from app.handlers.manga import register_manga_handlers
