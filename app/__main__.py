@@ -1,6 +1,5 @@
 import asyncio
 
-import aiohttp
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.environment import EnvironmentMiddleware
@@ -9,7 +8,7 @@ from structlog.stdlib import BoundLogger
 
 from app.config_reader import load_config
 from app.handlers import (register_introduction_handlers,
-                          register_manga_handlers)
+                          register_manga_handlers, register_source_handlers)
 from app.logging import logging_configure
 from app.services.manga.anilist import AnilistApi
 
@@ -36,11 +35,14 @@ async def main() -> None:
     anilist = AnilistApi()
 
     dp.setup_middleware(
-        EnvironmentMiddleware({"anilist": anilist}),
+        EnvironmentMiddleware(
+            {"anilist": anilist, "config": config},
+        ),
     )
     logger.info("Middlewares are setup!")
 
     register_introduction_handlers(dp)
+    register_source_handlers(dp)
     register_manga_handlers(dp)
     logger.info("Handlers are registered!")
 
