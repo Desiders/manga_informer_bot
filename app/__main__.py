@@ -19,7 +19,7 @@ async def main() -> None:
     logging_configure()
     logger.info("Logging is configured")
 
-    config = load_config("config.ini")
+    config = load_config()
     logger.info("Configuration loaded")
 
     bot = Bot(

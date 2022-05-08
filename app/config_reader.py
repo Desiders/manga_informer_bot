@@ -1,4 +1,4 @@
-from configparser import ConfigParser
+from os import getenv
 
 from pydantic import BaseModel
 
@@ -16,18 +16,12 @@ class Config(BaseModel):
     source: Source
 
 
-def load_config(path: str) -> Config:
-    config = ConfigParser()
-    config.read(path)
-
-    bot = config["bot"]
-    source = config["source"]
-
+def load_config() -> Config:
     return Config(
         bot=Bot(
-            token=bot["token"],
+            token=getenv("BOT_TOKEN"),
         ),
         source=Source(
-            url=source["url"],
+            url=getenv("SOURCE_URL"),
         ),
     )
