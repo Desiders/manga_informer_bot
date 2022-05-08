@@ -1,0 +1,15 @@
+# Project
+.idea/
+.github/
+.flake8
+.*ignore
+.isort.cfg
+Makefile
+README.md
+
+# Texts
+*.mo
+
+# Docker
+docker-compose*.yml
+Dockerfile
