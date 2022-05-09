@@ -1,4 +1,5 @@
 from typing import Optional
+
 from aiogram.utils.text_decorations import html_decoration as html
 
 UNKNOWN_TEXT = "unknown"

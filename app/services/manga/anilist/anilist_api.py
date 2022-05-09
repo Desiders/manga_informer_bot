@@ -1,9 +1,9 @@
 from typing import Optional
 
 from aiohttp import ClientResponse, ClientSession, ClientTimeout
-from app.html_utils import escape_html
 from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
 from app.services.manga.anilist.schemas import MangaPreview, MangaRelation
+from app.text_utils.html_formatting import escape_html_or_none
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
 
@@ -83,11 +83,11 @@ class AnilistApi:
 
         return MangaPreview(
             id=data["id"],
-            english_name=title["english"],
-            romaji_name=title["romaji"],
-            native_name=title["native"],
+            english_name=escape_html_or_none(title["english"]),
+            romaji_name=escape_html_or_none(title["romaji"]),
+            native_name=escape_html_or_none(title["native"]),
             url=data["siteUrl"],
-            description=escape_html(data["description"]),
+            description=escape_html_or_none(data["description"]),
             genres=data["genres"],
         )
 
@@ -133,15 +133,11 @@ class AnilistApi:
 
         return MangaPreview(
             id=data["id"],
-            english_name=title["english"],
-            romaji_name=title["romaji"],
-            native_name=title["native"],
+            english_name=escape_html_or_none(title["english"]),
+            romaji_name=escape_html_or_none(title["romaji"]),
+            native_name=escape_html_or_none(title["native"]),
             url=data["siteUrl"],
-            description=(
-                escape_html(data["description"])
-                if data["description"]
-                else None
-            ),
+            description=escape_html_or_none(data["description"]),
             genres=data["genres"],
         )
 
@@ -188,13 +184,16 @@ class AnilistApi:
             node = edge["node"]
             title = node["title"]
 
+            # from ABC_TEST to ABC TEST
+            relation_type = edge["relationType"].replace("_", " ")
+
             manga_relations.append(
                 MangaRelation(
                     id=node["id"],
-                    english_name=title["english"],
-                    romaji_name=title["romaji"],
-                    native_name=title["native"],
-                    relation_type=edge["relationType"].replace("_", " "),
+                    english_name=escape_html_or_none(title["english"]),
+                    romaji_name=escape_html_or_none(title["romaji"]),
+                    native_name=escape_html_or_none(title["native"]),
+                    relation_type=relation_type,
                 ),
             )
         return manga_relations

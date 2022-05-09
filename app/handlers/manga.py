@@ -5,9 +5,12 @@ from aiogram.types import (CallbackQuery, InlineKeyboardButton,
 from aiogram.utils.text_decorations import html_decoration as html
 from app.services.manga.anilist import AnilistApi
 from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
-from app.text_formatting import (formatting_description, formatting_genres,
-                                 formatting_relation_type, formatting_source,
-                                 formatting_titles)
+from app.text_utils.text_checker import utf8_length
+from app.text_utils.text_formatting import (formatting_description,
+                                            formatting_genres,
+                                            formatting_relation_type,
+                                            formatting_source,
+                                            formatting_titles)
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
 
@@ -62,6 +65,18 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
 
         text = (
             "The source have some problems, repeat your request later!"
+        )
+
+        await wait_msg.edit_text(
+            text=text,
+            parse_mode=None,
+            disable_web_page_preview=True,
+        )
+        return
+
+    if utf8_length(manga_name) > 64:
+        text = (
+            "This manga name is so long!"
         )
 
         await wait_msg.edit_text(
