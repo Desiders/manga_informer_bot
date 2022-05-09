@@ -18,21 +18,6 @@ logger: BoundLogger = get_logger()
 
 
 async def manga_preview_cmd(m: Message, anilist: AnilistApi):
-    if m.content_type != "text":
-        text = (
-            "Bot receive only text for search!\n"
-            "Send any manga's name. For example: "
-            f"{html.code('Tokyo Ghoul')}.\n\n"
-        )
-
-        await m.reply(
-            text=text,
-            parse_mode="HTML",
-            disable_web_page_preview=True,
-            disable_notification=False,
-        )
-        return
-
     text = (
         "Wait one second, please! Searching..."
     )
@@ -124,6 +109,21 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
         disable_web_page_preview=False,
         disable_notification=False,
         reply_markup=InlineKeyboardMarkup(row_width=2).add(*buttons)
+    )
+
+
+async def manga_preview_incorrect_cmd(m: Message):
+    text = (
+        "Bot receive only text for search!\n"
+        "Send any manga's name. For example: "
+        f"{html.code('Tokyo Ghoul')}.\n\n"
+    )
+
+    await m.reply(
+        text=text,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+        disable_notification=False,
     )
 
 
@@ -274,6 +274,11 @@ async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
 def register_manga_handlers(dp: Dispatcher):
     dp.register_message_handler(
         manga_preview_cmd,
+        content_types=["text"],
+        state="*",
+    )
+    dp.register_message_handler(
+        manga_preview_incorrect_cmd,
         content_types=["any"],
         state="*",
     )
