@@ -5,14 +5,18 @@ from aiogram.types import (CallbackQuery, InlineKeyboardButton,
 from aiogram.utils.text_decorations import html_decoration as html
 from app.services.manga.anilist import AnilistApi
 from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
-from app.text_utils.text_checker import utf8_length
-from app.text_utils.text_formatting import (formatting_description,
+from app.text_utils.html_formatting import escape_html_tags
+from app.text_utils.text_checker import all_text_length, utf8_length
+from app.text_utils.text_formatting import (cut_description,
+                                            formatting_description,
                                             formatting_genres,
                                             formatting_relation_type,
                                             formatting_source,
                                             formatting_titles)
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
+
+MAX_TEXT_LENGHT = 4000
 
 logger: BoundLogger = get_logger()
 
@@ -70,6 +74,30 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
             disable_web_page_preview=True,
         )
         return
+    
+    titles = formatting_titles(
+        manga.english_name,
+        manga.romaji_name,
+        manga.native_name,
+    )
+    description = formatting_description(manga.description)
+    genres = formatting_genres(manga.genres)
+    source = formatting_source(manga.url)
+
+    text_length = all_text_length(
+        titles, description,
+        genres, source,
+    )
+
+    if text_length > MAX_TEXT_LENGHT:
+        need_cut_length = text_length - MAX_TEXT_LENGHT
+
+        description = formatting_description(
+            cut_description(
+                escape_html_tags(description, "lxml"),
+                need_cut_length,
+            ),
+        ) + "... (so long description)"
 
     text = (
         "Titles:\n{titles}\n\n"
@@ -77,14 +105,10 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
         "Genres: {genres}\n\n"
         "{source}"
     ).format(
-        titles=formatting_titles(
-            manga.english_name,
-            manga.romaji_name,
-            manga.native_name,
-        ),
-        description=formatting_description(manga.description),
-        genres=formatting_genres(manga.genres),
-        source=formatting_source(manga.url),
+        titles=titles,
+        description=description,
+        genres=genres,
+        source=source,
     )
 
     buttons = [
@@ -172,20 +196,40 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
         )
         return
 
+    titles = formatting_titles(
+        manga.english_name,
+        manga.romaji_name,
+        manga.native_name,
+    )
+    description = formatting_description(manga.description)
+    genres = formatting_genres(manga.genres)
+    source = formatting_source(manga.url)
+
+    text_length = all_text_length(
+        titles, description,
+        genres, source,
+    )
+
+    if text_length > MAX_TEXT_LENGHT:
+        need_cut_length = text_length - MAX_TEXT_LENGHT
+
+        description = formatting_description(
+            cut_description(
+                escape_html_tags(description, "lxml"),
+                need_cut_length,
+            ),
+        ) + "... (so long description)"
+
     text = (
         "Titles:\n{titles}\n\n"
         "Description: {description}\n\n"
         "Genres: {genres}\n\n"
         "{source}"
     ).format(
-        titles=formatting_titles(
-            manga.english_name,
-            manga.romaji_name,
-            manga.native_name,
-        ),
-        description=formatting_description(manga.description),
-        genres=formatting_genres(manga.genres),
-        source=formatting_source(manga.url),
+        titles=titles,
+        description=description,
+        genres=genres,
+        source=source,
     )
 
     m = q.message

@@ -49,3 +49,7 @@ def formatting_relation_type(relation_type: str) -> str:
     func_format = html.code
 
     return func_format(relation_type.capitalize())
+
+
+def cut_description(description: str, need_cut_length: int) -> str:
+    return description[:-need_cut_length]

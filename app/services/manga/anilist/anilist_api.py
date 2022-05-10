@@ -3,7 +3,7 @@ from typing import Optional
 from aiohttp import ClientResponse, ClientSession, ClientTimeout
 from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
 from app.services.manga.anilist.schemas import MangaPreview, MangaRelation
-from app.text_utils.html_formatting import escape_html_or_none
+from app.text_utils.html_formatting import escape_html_tags_or_none
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
 
@@ -83,11 +83,11 @@ class AnilistApi:
 
         return MangaPreview(
             id=data["id"],
-            english_name=escape_html_or_none(title["english"]),
-            romaji_name=escape_html_or_none(title["romaji"]),
-            native_name=escape_html_or_none(title["native"]),
+            english_name=escape_html_tags_or_none(title["english"]),
+            romaji_name=escape_html_tags_or_none(title["romaji"]),
+            native_name=escape_html_tags_or_none(title["native"]),
             url=data["siteUrl"],
-            description=escape_html_or_none(data["description"]),
+            description=escape_html_tags_or_none(data["description"]),
             genres=data["genres"],
         )
 
@@ -133,11 +133,11 @@ class AnilistApi:
 
         return MangaPreview(
             id=data["id"],
-            english_name=escape_html_or_none(title["english"]),
-            romaji_name=escape_html_or_none(title["romaji"]),
-            native_name=escape_html_or_none(title["native"]),
+            english_name=escape_html_tags_or_none(title["english"]),
+            romaji_name=escape_html_tags_or_none(title["romaji"]),
+            native_name=escape_html_tags_or_none(title["native"]),
             url=data["siteUrl"],
-            description=escape_html_or_none(data["description"]),
+            description=escape_html_tags_or_none(data["description"]),
             genres=data["genres"],
         )
 
@@ -190,9 +190,9 @@ class AnilistApi:
             manga_relations.append(
                 MangaRelation(
                     id=node["id"],
-                    english_name=escape_html_or_none(title["english"]),
-                    romaji_name=escape_html_or_none(title["romaji"]),
-                    native_name=escape_html_or_none(title["native"]),
+                    english_name=escape_html_tags_or_none(title["english"]),
+                    romaji_name=escape_html_tags_or_none(title["romaji"]),
+                    native_name=escape_html_tags_or_none(title["native"]),
                     relation_type=relation_type,
                 ),
             )
