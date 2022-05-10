@@ -58,6 +58,7 @@ class AnilistApi:
                     romaji
                     native
                 }
+                format
                 siteUrl
                 description
                 genres
@@ -86,6 +87,7 @@ class AnilistApi:
             english_name=escape_html_tags_or_none(title["english"]),
             romaji_name=escape_html_tags_or_none(title["romaji"]),
             native_name=escape_html_tags_or_none(title["native"]),
+            title_format=data["format"],
             url=data["siteUrl"],
             description=escape_html_tags_or_none(data["description"]),
             genres=data["genres"],
@@ -106,6 +108,7 @@ class AnilistApi:
                         romaji
                         native
                     }
+                    format
                     siteUrl
                     description
                     genres
@@ -136,6 +139,7 @@ class AnilistApi:
             english_name=escape_html_tags_or_none(title["english"]),
             romaji_name=escape_html_tags_or_none(title["romaji"]),
             native_name=escape_html_tags_or_none(title["native"]),
+            title_format=data["format"],
             url=data["siteUrl"],
             description=escape_html_tags_or_none(data["description"]),
             genres=data["genres"],
@@ -154,6 +158,8 @@ class AnilistApi:
                                 romaji
                                 native
                             }
+                            format
+                            siteUrl
                         }
                         relationType
                     }
@@ -184,16 +190,15 @@ class AnilistApi:
             node = edge["node"]
             title = node["title"]
 
-            # from ABC_TEST to ABC TEST
-            relation_type = edge["relationType"].replace("_", " ")
-
             manga_relations.append(
                 MangaRelation(
                     id=node["id"],
                     english_name=escape_html_tags_or_none(title["english"]),
                     romaji_name=escape_html_tags_or_none(title["romaji"]),
                     native_name=escape_html_tags_or_none(title["native"]),
-                    relation_type=relation_type,
+                    title_format=node["format"],
+                    url=node["siteUrl"],
+                    relation_type=edge["relationType"],
                 ),
             )
         return manga_relations

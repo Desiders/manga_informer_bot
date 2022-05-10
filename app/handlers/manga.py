@@ -12,6 +12,7 @@ from app.text_utils.text_formatting import (cut_description,
                                             formatting_genres,
                                             formatting_relation_type,
                                             formatting_source,
+                                            formatting_title_format,
                                             formatting_titles)
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
@@ -80,6 +81,7 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
         manga.romaji_name,
         manga.native_name,
     )
+    title_format = formatting_title_format(manga.title_format)
     description = formatting_description(manga.description)
     genres = formatting_genres(manga.genres)
     source = formatting_source(manga.url)
@@ -101,11 +103,13 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
 
     text = (
         "Titles:\n{titles}\n\n"
+        "Format: {title_format}\n\n"
         "Description: {description}\n\n"
         "Genres: {genres}\n\n"
         "{source}"
     ).format(
         titles=titles,
+        title_format=title_format,
         description=description,
         genres=genres,
         source=source,
@@ -201,6 +205,7 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
         manga.romaji_name,
         manga.native_name,
     )
+    title_format = formatting_title_format(manga.title_format)
     description = formatting_description(manga.description)
     genres = formatting_genres(manga.genres)
     source = formatting_source(manga.url)
@@ -222,11 +227,13 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
 
     text = (
         "Titles:\n{titles}\n\n"
+        "Format: {title_format}\n\n"
         "Description: {description}\n\n"
         "Genres: {genres}\n\n"
         "{source}"
     ).format(
         titles=titles,
+        title_format=title_format,
         description=description,
         genres=genres,
         source=source,
@@ -258,6 +265,7 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
         disable_web_page_preview=False,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
     )
+    await q.answer()
 
 
 async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
@@ -291,25 +299,39 @@ async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
         )
         return
 
-    text = "Relations:\n\n"
-    for manga in relations:
-        pre_text = (
-            "Titles:\n{titles}\n\n"
-            "Relation: {relation_type}\n\n"
-        ).format(
-            titles=formatting_titles(
-                manga.english_name,
-                manga.romaji_name,
-                manga.native_name,
-            ),
-            relation_type=formatting_relation_type(manga.relation_type),
+    pre_texts = []
+    for index, manga in enumerate(relations, start=1):
+        titles = formatting_titles(
+            manga.english_name,
+            manga.romaji_name,
+            manga.native_name,
         )
-        text += pre_text
+        title_format = formatting_title_format(manga.title_format)
+        relation_type = formatting_relation_type(manga.relation_type)
+        source = formatting_source(manga.url)
+
+        pre_text = (
+            "{index}. "
+            "Titles:\n{titles}\n\n"
+            "Format: {title_format}\n"
+            "Relation: {relation_type}\n\n"
+            "{source}"
+        ).format(
+            index=index,
+            titles=titles,
+            title_format=title_format,
+            relation_type=relation_type,
+            source=source,
+        )
+
+        pre_texts.append(pre_text)
+
+    text = "Relations:\n\n" + "\n--------\n".join(pre_texts)
 
     await q.message.reply(
         text=text,
         parse_mode="HTML",
-        disable_web_page_preview=False,
+        disable_web_page_preview=True,
         disable_notification=False,
     )
     await q.answer()

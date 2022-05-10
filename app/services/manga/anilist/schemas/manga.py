@@ -7,6 +7,7 @@ class MangaPreview(BaseModel):
     english_name: Optional[str]
     romaji_name: Optional[str]
     native_name: Optional[str]
+    title_format: str
     url: str
     description: Optional[str]
     genres: list[str]
@@ -17,4 +18,6 @@ class MangaRelation(BaseModel):
     english_name: Optional[str]
     romaji_name: Optional[str]
     native_name: Optional[str]
+    title_format: str
+    url: str
     relation_type: str

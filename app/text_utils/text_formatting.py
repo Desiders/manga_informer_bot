@@ -19,6 +19,22 @@ def formatting_titles(*titles) -> str:
     return start + sep.join(map(func_format, filter(func_check, titles)))
 
 
+def formatting_title_format(title_format: str) -> str:
+    func_format = html.code
+
+    if (
+        title_format.startswith("TV") or
+        title_format in {"OVA", "ONA"}
+    ):
+        pass
+    else:
+        title_format = title_format.capitalize()
+
+    return func_format(
+        title_format.replace("_", " "),
+    )
+
+
 def formatting_description(description: str) -> str:
     func_format = html.code
 
@@ -48,7 +64,9 @@ def formatting_source(url: str) -> str:
 def formatting_relation_type(relation_type: str) -> str:
     func_format = html.code
 
-    return func_format(relation_type.capitalize())
+    return func_format(
+        relation_type.replace("_", " ").capitalize(),
+    )
 
 
 def cut_description(description: str, need_cut_length: int) -> str:
