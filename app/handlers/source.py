@@ -22,6 +22,6 @@ def register_source_handlers(dp: Dispatcher):
     dp.register_message_handler(
         callback=source_cmd,
         commands={"source", "code"},
-        content_types=["text"],
+        content_types={"text"},
         state="*",
     )

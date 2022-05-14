@@ -3,6 +3,7 @@ from typing import Optional
 from aiohttp import ClientResponse, ClientSession, ClientTimeout
 from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
 from app.services.manga.anilist.schemas import MangaPreview, MangaRelation
+from app.services.manga.anilist.schemas.manga import MangaRelations
 from app.text_utils.html_formatting import escape_html_tags_or_none
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
@@ -145,7 +146,7 @@ class AnilistApi:
             genres=data["genres"],
         )
 
-    async def manga_relations_by_id(self, id: int) -> list[MangaRelation]:
+    async def manga_relations_by_id(self, id: int) -> MangaRelations:
         query = """
         query ($id: Int) {
             Media(id: $id) {
@@ -164,6 +165,7 @@ class AnilistApi:
                         relationType
                     }
                 }
+                siteUrl
             }
         }
         """
@@ -201,4 +203,7 @@ class AnilistApi:
                     relation_type=edge["relationType"],
                 ),
             )
-        return manga_relations
+        return MangaRelations(
+            relations=manga_relations,
+            url=data["siteUrl"],
+        )

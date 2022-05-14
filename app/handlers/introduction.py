@@ -24,6 +24,6 @@ def register_introduction_handlers(dp: Dispatcher):
     dp.register_message_handler(
         callback=start_cmd,
         commands={"start", "help"},
-        content_types=["text"],
+        content_types={"text"},
         state="*",
     )

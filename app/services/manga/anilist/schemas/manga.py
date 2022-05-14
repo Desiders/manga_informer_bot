@@ -21,3 +21,8 @@ class MangaRelation(BaseModel):
     title_format: str
     url: str
     relation_type: str
+
+
+class MangaRelations(BaseModel):
+    relations: list[MangaRelation]
+    url: str

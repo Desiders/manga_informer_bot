@@ -61,6 +61,6 @@ async def sticker_cmd(m: Message):
 def register_funny_handlers(dp: Dispatcher):
     dp.register_message_handler(
         callback=sticker_cmd,
-        content_types=["sticker"],
+        content_types={"sticker"},
         state="*",
     )

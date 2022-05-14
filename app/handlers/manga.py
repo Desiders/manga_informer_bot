@@ -18,6 +18,7 @@ from structlog import get_logger
 from structlog.stdlib import BoundLogger
 
 MAX_TEXT_LENGHT = 4000
+MAX_COUNT_RELATIONS = 18
 
 logger: BoundLogger = get_logger()
 
@@ -272,7 +273,7 @@ async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
     _, manga_id = q.data.split(maxsplit=1)
 
     try:
-        relations = await anilist.manga_relations_by_id(manga_id)
+        manga_relations = await anilist.manga_relations_by_id(manga_id)
     except ServerError as e:
         logger.exception(e, query=q)
 
@@ -286,6 +287,8 @@ async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
             cache_time=5,
         )
         return
+
+    relations = manga_relations.relations
 
     if not relations:
         text = (
@@ -326,7 +329,18 @@ async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
 
         pre_texts.append(pre_text)
 
+        if index == MAX_COUNT_RELATIONS:
+            pre_text = (
+                "... (so many relations). "
+                f"{html.link('To the original', manga_relations.url)}"
+            )
+
+            pre_texts.append(pre_text)
+            break
+
     text = "Relations:\n\n" + "\n--------\n".join(pre_texts)
+
+    logger.info("Text length", text_len=len(text))
 
     await q.message.reply(
         text=text,
@@ -340,12 +354,12 @@ async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
 def register_manga_handlers(dp: Dispatcher):
     dp.register_message_handler(
         manga_preview_cmd,
-        content_types=["text"],
+        content_types={"text"},
         state="*",
     )
     dp.register_message_handler(
         manga_preview_incorrect_cmd,
-        content_types=["any"],
+        content_types={"any"},
         state="*",
     )
     dp.register_callback_query_handler(
