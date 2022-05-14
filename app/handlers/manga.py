@@ -52,7 +52,11 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
         )
         return
     except ServerError as e:
-        logger.exception(e, message=m)
+        logger.exception(
+            "Handling error!",
+            error=e,
+            message=m,
+        )
 
         text = (
             "The source have some problems, repeat your request later!"
@@ -76,7 +80,7 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
             disable_web_page_preview=True,
         )
         return
-    
+
     titles = formatting_titles(
         manga.english_name,
         manga.romaji_name,
@@ -188,7 +192,11 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
         )
         return
     except ServerError as e:
-        logger.exception(e, query=q)
+        logger.exception(
+            "Handling error!",
+            error=e,
+            query=q,
+        )
 
         text = (
             "The source have some problems, repeat your request later!"
@@ -275,7 +283,11 @@ async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
     try:
         manga_relations = await anilist.manga_relations_by_id(manga_id)
     except ServerError as e:
-        logger.exception(e, query=q)
+        logger.exception(
+            "Handling error!",
+            error=e,
+            query=q,
+        )
 
         text = (
             "The source have some problems, repeat your request later!"

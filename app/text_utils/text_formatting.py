@@ -22,10 +22,7 @@ def formatting_titles(*titles) -> str:
 def formatting_title_format(title_format: str) -> str:
     func_format = html.code
 
-    if (
-        title_format.startswith("TV") or
-        title_format in {"OVA", "ONA"}
-    ):
+    if title_format.startswith("TV") or title_format in {"OVA", "ONA"}:
         pass
     else:
         title_format = title_format.capitalize()
@@ -35,7 +32,7 @@ def formatting_title_format(title_format: str) -> str:
     )
 
 
-def formatting_description(description: str) -> str:
+def formatting_description(description: Optional[str]) -> str:
     func_format = html.code
 
     if description:

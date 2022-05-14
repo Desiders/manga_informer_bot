@@ -46,7 +46,7 @@ class AnilistApi:
             },
         )
         if response.status >= 500:
-            raise ServerError(await response.text)
+            raise ServerError(await response.text())
         return response
 
     async def manga_preview_by_name(self, name: str) -> MangaPreview:
