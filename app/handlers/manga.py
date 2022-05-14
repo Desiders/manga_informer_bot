@@ -340,8 +340,6 @@ async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
 
     text = "Relations:\n\n" + "\n--------\n".join(pre_texts)
 
-    logger.info("Text length", text_len=len(text))
-
     await q.message.reply(
         text=text,
         parse_mode="HTML",
