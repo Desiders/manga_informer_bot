@@ -61,6 +61,7 @@ class AnilistApi:
                 }
                 format
                 siteUrl
+                bannerImage
                 description
                 genres
             }
@@ -90,6 +91,53 @@ class AnilistApi:
             native_name=escape_html_tags_or_none(title["native"]),
             title_format=data["format"],
             url=data["siteUrl"],
+            banner_image_url=data["bannerImage"],
+            description=escape_html_tags_or_none(data["description"]),
+            genres=data["genres"],
+        )
+    
+    async def manga_preview_by_id(self, manga_id: int) -> MangaPreview:
+        query = """
+        query ($id: Int) {
+            Media(id: $id, type: MANGA) {
+                title {
+                    english
+                    romaji
+                    native
+                }
+                format
+                siteUrl
+                bannerImage
+                description
+                genres
+            }
+        }
+        """
+        variables = {
+            "id": manga_id,
+        }
+
+        response = await self.send_request_to_source(
+            query=query, variables=variables,
+        )
+        if response.status == 404:
+            raise MangaNotFound(
+                "Manga with this name not found!"
+            )
+
+        result = await response.json()
+
+        data = result["data"]["Media"]
+        title = data["title"]
+
+        return MangaPreview(
+            id=manga_id,
+            english_name=escape_html_tags_or_none(title["english"]),
+            romaji_name=escape_html_tags_or_none(title["romaji"]),
+            native_name=escape_html_tags_or_none(title["native"]),
+            title_format=data["format"],
+            url=data["siteUrl"],
+            banner_image_url=data["bannerImage"],
             description=escape_html_tags_or_none(data["description"]),
             genres=data["genres"],
         )
@@ -111,6 +159,7 @@ class AnilistApi:
                     }
                     format
                     siteUrl
+                    bannerImage
                     description
                     genres
                 }
@@ -142,6 +191,7 @@ class AnilistApi:
             native_name=escape_html_tags_or_none(title["native"]),
             title_format=data["format"],
             url=data["siteUrl"],
+            banner_image_url=data["bannerImage"],
             description=escape_html_tags_or_none(data["description"]),
             genres=data["genres"],
         )
@@ -161,6 +211,7 @@ class AnilistApi:
                             }
                             format
                             siteUrl
+                            bannerImage
                         }
                         relationType
                     }
@@ -200,6 +251,7 @@ class AnilistApi:
                     native_name=escape_html_tags_or_none(title["native"]),
                     title_format=node["format"],
                     url=node["siteUrl"],
+                    banner_image_url=node["bannerImage"],
                     relation_type=edge["relationType"],
                 ),
             )

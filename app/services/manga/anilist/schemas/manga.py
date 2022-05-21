@@ -9,6 +9,7 @@ class MangaPreview(BaseModel):
     native_name: Optional[str]
     title_format: str
     url: str
+    banner_image_url: Optional[str]
     description: Optional[str]
     genres: list[str]
 
@@ -20,6 +21,7 @@ class MangaRelation(BaseModel):
     native_name: Optional[str]
     title_format: str
     url: str
+    banner_image_url: Optional[str]
     relation_type: str
 
 

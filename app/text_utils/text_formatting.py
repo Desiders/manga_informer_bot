@@ -19,6 +19,13 @@ def formatting_titles(*titles) -> str:
     return start + sep.join(map(func_format, filter(func_check, titles)))
 
 
+def formatting_titles_for_inline(*titles) -> str:
+    func_check = is_correct_name
+    sep = " | "
+
+    return sep.join(filter(func_check, titles))
+
+
 def formatting_title_format(title_format: str) -> str:
     func_format = html.code
 
@@ -32,6 +39,15 @@ def formatting_title_format(title_format: str) -> str:
     )
 
 
+def formatting_title_format_for_inline(title_format: str) -> str:
+    if title_format.startswith("TV") or title_format in {"OVA", "ONA"}:
+        pass
+    else:
+        title_format = title_format.capitalize()
+
+    return title_format.replace("_", " ")
+
+
 def formatting_description(description: Optional[str]) -> str:
     func_format = html.code
 
@@ -39,6 +55,14 @@ def formatting_description(description: Optional[str]) -> str:
         return "\n" + func_format(description)
     else:
         return func_format(UNKNOWN_TEXT)
+
+
+def formatting_description_for_inline(
+    title_format: str, relation_type: str,
+) -> str:
+    sep = " | "
+
+    return sep.join((title_format, relation_type))
 
 
 def formatting_genres(genres: list[str]) -> str:
@@ -64,6 +88,10 @@ def formatting_relation_type(relation_type: str) -> str:
     return func_format(
         relation_type.replace("_", " ").capitalize(),
     )
+
+
+def formatting_relation_type_for_inline(relation_type: str) -> str:
+    return relation_type.replace("_", " ").capitalize()
 
 
 def cut_description(description: str, need_cut_length: int) -> str:
