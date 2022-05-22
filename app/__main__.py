@@ -9,9 +9,9 @@ from structlog.stdlib import BoundLogger
 from app.config_reader import load_config
 from app.handlers import (register_funny_handlers,
                           register_introduction_handlers,
-                          register_manga_handlers, register_source_handlers)
+                          register_source_handlers, register_title_handlers)
 from app.logging import logging_configure
-from app.services.manga.anilist import AnilistApi
+from app.services.title.anilist import AnilistApi
 
 logger: BoundLogger = get_logger()
 
@@ -45,7 +45,7 @@ async def main() -> None:
     register_introduction_handlers(dp)
     register_funny_handlers(dp)
     register_source_handlers(dp)
-    register_manga_handlers(dp)
+    register_title_handlers(dp)
     logger.info("Handlers are registered!")
 
     logger.warning("Bot starting!")

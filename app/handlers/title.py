@@ -6,8 +6,9 @@ from aiogram.types import (CallbackQuery, InlineKeyboardButton,
                            Message)
 from aiogram.utils.text_decorations import html_decoration as html
 from app.filters import CorrectId
-from app.services.manga.anilist import AnilistApi
-from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
+from app.services.title.anilist import AnilistApi
+from app.services.title.anilist.dto import TitleFormat
+from app.services.title.anilist.exceptions import ServerError, TitleNotFound
 from app.text_utils.html_formatting import (escape_html_tags,
                                             escape_html_tags_or_none)
 from app.text_utils.text_checker import all_text_length, utf8_length
@@ -25,10 +26,49 @@ MAX_COUNT_RELATIONS = 18
 logger: BoundLogger = get_logger()
 
 
-async def manga_preview_cmd(m: Message, anilist: AnilistApi):
+async def title_format_cmd(m: Message):
+    text = (
+        "What title format do you want to see?"
+    )
+
+    buttons = [
+        InlineKeyboardButton(
+            text="Anime (anime, OVA, etc.)",
+            callback_data="format anime",
+        ),
+        InlineKeyboardButton(
+            text="Manga (manga, novel, etc.)",
+            callback_data="format manga",
+        ),
+        InlineKeyboardButton(
+            text="Everything",
+            callback_data="format everything",
+        ),
+    ]
+
+    await m.reply(
+        text=text,
+        parse_mode=None,
+        disable_web_page_preview=True,
+        disable_notification=False,
+        reply_markup=InlineKeyboardMarkup(row_width=1).add(*buttons)
+    )
+
+
+async def title_preview_cmd(q: CallbackQuery, anilist: AnilistApi):
+    _, title_format_pure = q.data.split(maxsplit=2)
+    if title_format_pure == "anime":
+        title_format = TitleFormat.ANIME
+    elif title_format_pure == "manga":
+        title_format = TitleFormat.MANGA
+    elif title_format_pure == "everything":
+        title_format = TitleFormat.EVERYTHING
+
     text = (
         "Wait one second, please! Searching..."
     )
+
+    m = q.message.reply_to_message
 
     wait_msg = await m.reply(
         text=text,
@@ -38,13 +78,15 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
     )
 
     page = 1
-    manga_name = m.text
+    name = m.text
 
     try:
-        manga = await anilist.manga_preview_by_name(manga_name)
-    except MangaNotFound:
+        title = await anilist.title_preview_by_name(
+            name=name, title_format=title_format,
+        )
+    except TitleNotFound:
         text = (
-            "Manga with this name not found!"
+            "Title with this name not found!"
         )
 
         await wait_msg.edit_text(
@@ -69,11 +111,12 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
             parse_mode=None,
             disable_web_page_preview=True,
         )
+        await q.answer(cache_time=10)
         return
 
-    if utf8_length(manga_name) > 64:
+    if utf8_length(name) > 64:
         text = (
-            "This manga name is so long!"
+            "This title name is so long!"
         )
 
         await wait_msg.edit_text(
@@ -81,17 +124,18 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
             parse_mode=None,
             disable_web_page_preview=True,
         )
+        await q.answer()
         return
 
     titles = formatting_titles(
-        manga.english_name,
-        manga.romaji_name,
-        manga.native_name,
+        title.english_name,
+        title.romaji_name,
+        title.native_name,
     )
-    title_format = formatting_title_format(manga.title_format)
-    description = formatting_description(manga.description)
-    genres = formatting_genres(manga.genres)
-    source = formatting_source(manga.url)
+    title_format = formatting_title_format(title.title_format)
+    description = formatting_description(title.description)
+    genres = formatting_genres(title.genres)
+    source = formatting_source(title.url)
 
     text_length = all_text_length(
         titles, description,
@@ -122,22 +166,24 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
         source=source,
     )
 
+    title_format_small = title_format_pure[0]
+
     buttons = [
         InlineKeyboardButton(
             text="⬅️ Previous",
-            callback_data=f"preview {page - 1} {manga_name}"
+            callback_data=f"preview {title_format_small} {page - 1} {name}"
         ),
         InlineKeyboardButton(
             text="Next ➡️",
-            callback_data=f"preview {page + 1} {manga_name}"
+            callback_data=f"preview {title_format_small} {page + 1} {name}"
         ),
         InlineKeyboardButton(
             text="Relations",
-            switch_inline_query_current_chat=f"relations {manga.id}",
+            switch_inline_query_current_chat=f"relations {title.id}",
         ),
         InlineKeyboardButton(
             text="Share",
-            switch_inline_query=f"share {manga.id}",
+            switch_inline_query=f"share {title.id}",
         ),
     ]
 
@@ -149,12 +195,16 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
         disable_notification=False,
         reply_markup=InlineKeyboardMarkup(row_width=2).add(*buttons)
     )
+    await q.answer(
+        text="Thanks for using the bot!",
+        show_alert=False,
+    )
 
 
-async def manga_preview_incorrect_cmd(m: Message):
+async def title_preview_incorrect_cmd(m: Message):
     text = (
         "Bot receive only text for search!\n"
-        "Send any manga's name. For example: "
+        "Send any title's name. For example: "
         f"{html.code('Tokyo Ghoul')}.\n\n"
     )
 
@@ -166,13 +216,26 @@ async def manga_preview_incorrect_cmd(m: Message):
     )
 
 
-async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
-    _, page, manga_name = q.data.split(maxsplit=2)
+async def title_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
+    _, title_format_small, page, name = q.data.split(maxsplit=3)
     page = int(page)
+
+    title_format_pure = {
+        "a": "anime",
+        "m": "manga",
+        "e": "everything",
+    }[title_format_small]
+
+    if title_format_pure == "anime":
+        title_format = TitleFormat.ANIME
+    elif title_format_pure == "manga":
+        title_format = TitleFormat.MANGA
+    elif title_format_pure == "everything":
+        title_format = TitleFormat.EVERYTHING
 
     if page <= 0:
         text = (
-            "Manga not found!"
+            "Title not found!"
         )
 
         await q.answer(
@@ -183,12 +246,12 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
         return
 
     try:
-        manga = await anilist.manga_preview_page_by_name(
-            page=page, name=manga_name,
+        title = await anilist.title_preview_page_by_name(
+            page=page, name=name, title_format=title_format,
         )
-    except MangaNotFound:
+    except TitleNotFound:
         text = (
-            "Manga not found!"
+            "Title not found!"
         )
 
         await q.answer(
@@ -211,21 +274,21 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
         await q.answer(
             text=text,
             show_alert=True,
-            cache_time=5,
+            cache_time=10,
         )
         return
 
     titles = formatting_titles(
-        manga.english_name,
-        manga.romaji_name,
-        manga.native_name,
+        title.english_name,
+        title.romaji_name,
+        title.native_name,
     )
-    title_format = formatting_title_format(manga.title_format)
+    title_format = formatting_title_format(title.title_format)
     description = formatting_description(
-        escape_html_tags_or_none(manga.description, "lxml"),
+        escape_html_tags_or_none(title.description, "lxml"),
     )
-    genres = formatting_genres(manga.genres)
-    source = formatting_source(manga.url)
+    genres = formatting_genres(title.genres)
+    source = formatting_source(title.url)
 
     text_length = all_text_length(
         titles, description,
@@ -265,20 +328,20 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
 
             if button_text.endswith("previous"):
                 buttons[row_index][button_index].callback_data = (
-                    f"preview {page - 1} {manga_name}"
+                    f"preview {title_format_small} {page - 1} {name}"
                 )
             elif button_text.startswith("next"):
                 buttons[row_index][button_index].callback_data = (
-                    f"preview {page + 1} {manga_name}"
+                    f"preview {title_format_small} {page + 1} {name}"
                 )
             elif button_text.startswith("relations"):
                 buttons[row_index][button_index]\
                     .switch_inline_query_current_chat = (
-                    f"relations {manga.id}"
+                    f"relations {title.id}"
                 )
             elif button_text.startswith("share"):
                 buttons[row_index][button_index].switch_inline_query = (
-                    f"share {manga.id}"
+                    f"share {title.id}"
                 )
 
     await m.edit_text(
@@ -287,16 +350,16 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
         disable_web_page_preview=False,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
     )
-    await q.answer()
+    await q.answer(cache_time=3)
 
 
-async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
-    _, manga_id = q.query.split(maxsplit=1)
-    manga_id = int(manga_id)
+async def title_share_cmd(q: InlineQuery, anilist: AnilistApi):
+    _, title_id = q.query.split(maxsplit=1)
+    title_id = int(title_id)
 
     try:
-        manga = await anilist.manga_preview_by_id(manga_id)
-    except MangaNotFound:
+        title = await anilist.title_preview_by_id(title_id)
+    except TitleNotFound:
         return
     except ServerError as e:
         logger.exception(
@@ -306,25 +369,25 @@ async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
         )
         return
 
-    if utf8_length(str(manga_id)) > 64:
+    if utf8_length(str(title_id)) > 64:
         return
 
     titles = formatting_titles(
-        manga.english_name,
-        manga.romaji_name,
-        manga.native_name,
+        title.english_name,
+        title.romaji_name,
+        title.native_name,
     )
     titles_for_inline = formatting_titles_for_inline(
-        manga.english_name,
-        manga.romaji_name,
-        manga.native_name,
+        title.english_name,
+        title.romaji_name,
+        title.native_name,
     )
-    title_format = formatting_title_format(manga.title_format)
+    title_format = formatting_title_format(title.title_format)
     description = formatting_description(
-        escape_html_tags_or_none(manga.description, "lxml"),
+        escape_html_tags_or_none(title.description, "lxml"),
     )
-    genres = formatting_genres(manga.genres)
-    source = formatting_source(manga.url)
+    genres = formatting_genres(title.genres)
+    source = formatting_source(title.url)
 
     text_length = all_text_length(
         titles, description,
@@ -356,11 +419,11 @@ async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
     )
 
     description_for_inline = formatting_title_format_for_inline(
-        manga.title_format,
+        title.title_format,
     )
 
-    manga_preview = InlineQueryResultArticle(
-        id=manga_id,
+    preview = InlineQueryResultArticle(
+        id=title_id,
         title=titles_for_inline,
         input_message_content=InputTextMessageContent(
             message_text=text,
@@ -368,23 +431,23 @@ async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
             disable_web_page_preview=False,
         ),
         description=description_for_inline,
-        thumb_url=manga.banner_image_url,
+        thumb_url=title.banner_image_url,
     )
 
     await q.answer(
-        results=[manga_preview],
+        results=[preview],
         cache_time=3,
         is_personal=False,
     )
 
 
-async def manga_relations_cmd(q: InlineQuery, anilist: AnilistApi):
-    _, manga_id = q.query.split(maxsplit=1)
-    manga_id = int(manga_id)
+async def title_relations_cmd(q: InlineQuery, anilist: AnilistApi):
+    _, title_id = q.query.split(maxsplit=1)
+    title_id = int(title_id)
 
     try:
-        manga_relations = await anilist.manga_relations_by_id(manga_id)
-    except MangaNotFound:
+        relations = await anilist.title_relations_by_id(title_id)
+    except TitleNotFound:
         return
     except ServerError as e:
         logger.exception(
@@ -395,38 +458,38 @@ async def manga_relations_cmd(q: InlineQuery, anilist: AnilistApi):
 
         return
 
-    if not manga_relations:
+    if not relations:
         return
 
     results = []
-    for manga in manga_relations:
+    for title in relations:
         titles = formatting_titles(
-            manga.english_name,
-            manga.romaji_name,
-            manga.native_name,
+            title.english_name,
+            title.romaji_name,
+            title.native_name,
         )
         titles_for_inline = formatting_titles_for_inline(
-            manga.english_name,
-            manga.romaji_name,
-            manga.native_name,
+            title.english_name,
+            title.romaji_name,
+            title.native_name,
         )
 
-        title_format = formatting_title_format(manga.title_format)
+        title_format = formatting_title_format(title.title_format)
 
         description = formatting_description(
-            escape_html_tags_or_none(manga.description, "lxml"),
+            escape_html_tags_or_none(title.description, "lxml"),
         )
         description_for_inline = formatting_description_for_inline(
             title_format=formatting_title_format_for_inline(
-                manga.title_format,
+                title.title_format,
             ),
             relation_type=formatting_relation_type_for_inline(
-                manga.relation_type,
+                title.relation_type,
             ),
         )
 
-        genres = formatting_genres(manga.genres)
-        source = formatting_source(manga.url)
+        genres = formatting_genres(title.genres)
+        source = formatting_source(title.url)
 
         text_length = all_text_length(
             titles, description,
@@ -457,8 +520,8 @@ async def manga_relations_cmd(q: InlineQuery, anilist: AnilistApi):
             source=source,
         )
 
-        manga_relation_preview = InlineQueryResultArticle(
-            id=manga.id,
+        preview = InlineQueryResultArticle(
+            id=title.id,
             title=titles_for_inline,
             input_message_content=InputTextMessageContent(
                 message_text=text,
@@ -466,10 +529,10 @@ async def manga_relations_cmd(q: InlineQuery, anilist: AnilistApi):
                 disable_web_page_preview=False,
             ),
             description=description_for_inline,
-            thumb_url=manga.banner_image_url,
+            thumb_url=title.banner_image_url,
         )
 
-        results.append(manga_relation_preview)
+        results.append(preview)
 
     await q.answer(
         results=results,
@@ -478,30 +541,35 @@ async def manga_relations_cmd(q: InlineQuery, anilist: AnilistApi):
     )
 
 
-def register_manga_handlers(dp: Dispatcher):
+def register_title_handlers(dp: Dispatcher):
     dp.register_message_handler(
-        manga_preview_cmd,
+        title_format_cmd,
         content_types={"text"},
         state="*",
     )
+    dp.register_callback_query_handler(
+        title_preview_cmd,
+        Text(startswith="format"),
+        state="*",
+    )
     dp.register_message_handler(
-        manga_preview_incorrect_cmd,
+        title_preview_incorrect_cmd,
         content_types={"any"},
         state="*",
     )
     dp.register_callback_query_handler(
-        manga_preview_switch_cmd,
+        title_preview_switch_cmd,
         Text(startswith="preview"),
         state="*",
     )
     dp.register_inline_handler(
-        manga_share_cmd,
+        title_share_cmd,
         Text(startswith="share"),
         CorrectId(is_correct_id=True),
         state="*",
     )
     dp.register_inline_handler(
-        manga_relations_cmd,
+        title_relations_cmd,
         Text(startswith="relations"),
         CorrectId(is_correct_id=True),
         state="*",

@@ -7,7 +7,7 @@ async def start_cmd(m: Message):
     first_name = html.quote(m.from_user.first_name)
     text = (
         f"Hello, {first_name}!\n\n"
-        "Send me manga's name for searching manga by this name.\n\n"
+        "Send me title's name for searching title by this name.\n\n"
         "This bot is open source and doesn't save information "
         "about users: /source"
     )

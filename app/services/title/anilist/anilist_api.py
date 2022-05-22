@@ -1,8 +1,9 @@
 from typing import Optional
 
 from aiohttp import ClientResponse, ClientSession, ClientTimeout
-from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
-from app.services.manga.anilist.schemas import MangaPreview, MangaRelation
+from app.services.title.anilist.dto import TitleFormat
+from app.services.title.anilist.exceptions import ServerError, TitleNotFound
+from app.services.title.anilist.schemas import TitlePreview, TitleRelation
 from app.text_utils.html_formatting import escape_html_tags_or_none
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
@@ -48,10 +49,14 @@ class AnilistApi:
             raise ServerError(await response.text())
         return response
 
-    async def manga_preview_by_name(self, name: str) -> MangaPreview:
+    async def title_preview_by_name(
+        self,
+        name: str,
+        title_format: Optional[TitleFormat] = TitleFormat.EVERYTHING,
+    ) -> TitlePreview:
         query = """
         query ($search: String) {
-            Media(search: $search, type: MANGA) {
+            Media(search: $search, %s) {
                 id
                 title {
                     english
@@ -65,7 +70,7 @@ class AnilistApi:
                 genres
             }
         }
-        """
+        """ % title_format.value
         variables = {
             "search": name,
         }
@@ -74,8 +79,8 @@ class AnilistApi:
             query=query, variables=variables,
         )
         if response.status == 404:
-            raise MangaNotFound(
-                "Manga with this name not found!"
+            raise TitleNotFound(
+                "Title with this name not found!"
             )
 
         result = await response.json()
@@ -83,7 +88,7 @@ class AnilistApi:
         data = result["data"]["Media"]
         title = data["title"]
 
-        return MangaPreview(
+        return TitlePreview(
             id=data["id"],
             english_name=escape_html_tags_or_none(title["english"]),
             romaji_name=escape_html_tags_or_none(title["romaji"]),
@@ -95,10 +100,14 @@ class AnilistApi:
             genres=data["genres"],
         )
 
-    async def manga_preview_by_id(self, manga_id: int) -> MangaPreview:
+    async def title_preview_by_id(
+        self,
+        title_id: int,
+        title_format: Optional[TitleFormat] = TitleFormat.EVERYTHING,
+    ) -> TitlePreview:
         query = """
         query ($id: Int) {
-            Media(id: $id, type: MANGA) {
+            Media(id: $id, %s) {
                 title {
                     english
                     romaji
@@ -111,17 +120,17 @@ class AnilistApi:
                 genres
             }
         }
-        """
+        """ % title_format.value
         variables = {
-            "id": manga_id,
+            "id": title_id,
         }
 
         response = await self.send_request_to_source(
             query=query, variables=variables,
         )
         if response.status == 404:
-            raise MangaNotFound(
-                "Manga with this name not found!"
+            raise TitleNotFound(
+                "Title with this name not found!"
             )
 
         result = await response.json()
@@ -129,8 +138,8 @@ class AnilistApi:
         data = result["data"]["Media"]
         title = data["title"]
 
-        return MangaPreview(
-            id=manga_id,
+        return TitlePreview(
+            id=title_id,
             english_name=escape_html_tags_or_none(title["english"]),
             romaji_name=escape_html_tags_or_none(title["romaji"]),
             native_name=escape_html_tags_or_none(title["native"]),
@@ -141,15 +150,16 @@ class AnilistApi:
             genres=data["genres"],
         )
 
-    async def manga_preview_page_by_name(
+    async def title_preview_page_by_name(
         self,
         page: int,
         name: str,
-    ) -> MangaPreview:
+        title_format: Optional[TitleFormat] = TitleFormat.EVERYTHING,
+    ) -> TitlePreview:
         query = """
         query ($page: Int, $search: String) {
             Page(page: $page, perPage: 1) {
-                media(search: $search, type: MANGA) {
+                media(search: $search, %s) {
                     id
                     title {
                         english
@@ -164,7 +174,7 @@ class AnilistApi:
                 }
             }
         }
-        """
+        """ % title_format.value
         variables = {
             "page": page,
             "search": name,
@@ -178,12 +188,12 @@ class AnilistApi:
 
         data = result["data"]["Page"]["media"]
         if not data:
-            raise MangaNotFound("Manga not found!")
+            raise TitleNotFound("Title not found!")
         else:
             data = data[0]
         title = data["title"]
 
-        return MangaPreview(
+        return TitlePreview(
             id=data["id"],
             english_name=escape_html_tags_or_none(title["english"]),
             romaji_name=escape_html_tags_or_none(title["romaji"]),
@@ -195,7 +205,7 @@ class AnilistApi:
             genres=data["genres"],
         )
 
-    async def manga_relations_by_id(self, id: int) -> list[MangaRelation]:
+    async def title_relations_by_id(self, id: int) -> list[TitleRelation]:
         query = """
         query ($id: Int) {
             Media(id: $id) {
@@ -228,8 +238,8 @@ class AnilistApi:
             query=query, variables=variables,
         )
         if response.status == 404:
-            raise MangaNotFound(
-                "Manga with this id not found!"
+            raise TitleNotFound(
+                "Title with this id not found!"
             )
 
         result = await response.json()
@@ -244,7 +254,7 @@ class AnilistApi:
             title = node["title"]
 
             relations.append(
-                MangaRelation(
+                TitleRelation(
                     id=node["id"],
                     english_name=escape_html_tags_or_none(title["english"]),
                     romaji_name=escape_html_tags_or_none(title["romaji"]),

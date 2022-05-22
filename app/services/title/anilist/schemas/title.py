@@ -2,7 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-class MangaPreview(BaseModel):
+class TitlePreview(BaseModel):
     id: int
     english_name: Optional[str]
     romaji_name: Optional[str]
@@ -14,7 +14,7 @@ class MangaPreview(BaseModel):
     genres: list[str]
 
 
-class MangaRelation(BaseModel):
+class TitleRelation(BaseModel):
     id: int
     english_name: Optional[str]
     romaji_name: Optional[str]
