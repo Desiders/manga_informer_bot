@@ -8,7 +8,8 @@ from aiogram.utils.text_decorations import html_decoration as html
 from app.filters import CorrectId
 from app.services.manga.anilist import AnilistApi
 from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
-from app.text_utils.html_formatting import escape_html_tags
+from app.text_utils.html_formatting import (escape_html_tags,
+                                            escape_html_tags_or_none)
 from app.text_utils.text_checker import all_text_length, utf8_length
 from app.text_utils.text_formatting import (
     cut_description, formatting_description, formatting_description_for_inline,
@@ -221,7 +222,7 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
     )
     title_format = formatting_title_format(manga.title_format)
     description = formatting_description(
-        escape_html_tags(manga.description, "lxml"),
+        escape_html_tags_or_none(manga.description, "lxml"),
     )
     genres = formatting_genres(manga.genres)
     source = formatting_source(manga.url)
@@ -271,7 +272,8 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
                     f"preview {page + 1} {manga_name}"
                 )
             elif button_text.startswith("relations"):
-                buttons[row_index][button_index].switch_inline_query_current_chat = (
+                buttons[row_index][button_index]\
+                    .switch_inline_query_current_chat = (
                     f"relations {manga.id}"
                 )
             elif button_text.startswith("share"):
@@ -305,11 +307,6 @@ async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
         return
 
     if utf8_length(str(manga_id)) > 64:
-        logger.exception(
-            "So long utf8_length!",
-            error=e,
-            query=q,
-        )
         return
 
     titles = formatting_titles(
@@ -324,7 +321,7 @@ async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
     )
     title_format = formatting_title_format(manga.title_format)
     description = formatting_description(
-        escape_html_tags(manga.description, "lxml"),
+        escape_html_tags_or_none(manga.description, "lxml"),
     )
     genres = formatting_genres(manga.genres)
     source = formatting_source(manga.url)
@@ -417,7 +414,7 @@ async def manga_relations_cmd(q: InlineQuery, anilist: AnilistApi):
         title_format = formatting_title_format(manga.title_format)
 
         description = formatting_description(
-            escape_html_tags(manga.description, "lxml"),
+            escape_html_tags_or_none(manga.description, "lxml"),
         )
         description_for_inline = formatting_description_for_inline(
             title_format=formatting_title_format_for_inline(

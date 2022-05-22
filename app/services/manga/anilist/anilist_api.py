@@ -3,7 +3,6 @@ from typing import Optional
 from aiohttp import ClientResponse, ClientSession, ClientTimeout
 from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
 from app.services.manga.anilist.schemas import MangaPreview, MangaRelation
-from app.services.manga.anilist.schemas.manga import MangaRelation
 from app.text_utils.html_formatting import escape_html_tags_or_none
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
@@ -95,7 +94,7 @@ class AnilistApi:
             description=escape_html_tags_or_none(data["description"]),
             genres=data["genres"],
         )
-    
+
     async def manga_preview_by_id(self, manga_id: int) -> MangaPreview:
         query = """
         query ($id: Int) {

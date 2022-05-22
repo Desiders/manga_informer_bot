@@ -7,8 +7,9 @@ from aiogram.types import CallbackQuery, InlineQuery, Message, Poll
 class CorrectId(Filter):
     def __init__(self, is_correct_id: bool):
         self.is_correct_id = is_correct_id
-    
-    async def check(self, obj: Union[Message, CallbackQuery, InlineQuery, Poll]):
+
+    async def check(self, obj: Union[Message, CallbackQuery,
+                                     InlineQuery, Poll]):
         if isinstance(obj, Message):
             text = obj.text or obj.caption or ''
             if not text and obj.poll:
