@@ -22,9 +22,6 @@ class MangaRelation(BaseModel):
     title_format: str
     url: str
     banner_image_url: Optional[str]
+    description: Optional[str]
+    genres: list[str]
     relation_type: str
-
-
-class MangaRelations(BaseModel):
-    relations: list[MangaRelation]
-    url: str

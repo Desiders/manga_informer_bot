@@ -10,14 +10,11 @@ from app.services.manga.anilist import AnilistApi
 from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
 from app.text_utils.html_formatting import escape_html_tags
 from app.text_utils.text_checker import all_text_length, utf8_length
-from app.text_utils.text_formatting import (cut_description,
-                                            formatting_description, formatting_description_for_inline,
-                                            formatting_genres,
-                                            formatting_relation_type, formatting_relation_type_for_inline,
-                                            formatting_source,
-                                            formatting_title_format, formatting_title_format_for_inline,
-                                            formatting_titles,
-                                            formatting_titles_for_inline)
+from app.text_utils.text_formatting import (
+    cut_description, formatting_description, formatting_description_for_inline,
+    formatting_genres, formatting_relation_type_for_inline, formatting_source,
+    formatting_title_format, formatting_title_format_for_inline,
+    formatting_titles, formatting_titles_for_inline)
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
 
@@ -108,7 +105,7 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
                 escape_html_tags(description, "lxml"),
                 need_cut_length,
             ),
-        ) + "... (so long description)"
+        ) + html.bold("... (so long description)")
 
     text = (
         "Titles:\n{titles}\n\n"
@@ -127,19 +124,19 @@ async def manga_preview_cmd(m: Message, anilist: AnilistApi):
     buttons = [
         InlineKeyboardButton(
             text="⬅️ Previous",
-            callback_data=f"manga_preview_page {page - 1} {manga_name}"
+            callback_data=f"preview {page - 1} {manga_name}"
         ),
         InlineKeyboardButton(
             text="Next ➡️",
-            callback_data=f"manga_preview_page {page + 1} {manga_name}"
+            callback_data=f"preview {page + 1} {manga_name}"
         ),
         InlineKeyboardButton(
             text="Relations",
-            callback_data=f"manga_relations {manga.id}",
+            switch_inline_query_current_chat=f"relations {manga.id}",
         ),
         InlineKeyboardButton(
             text="Share",
-            switch_inline_query=f"manga_inline_preview_by_id {manga.id}",
+            switch_inline_query=f"share {manga.id}",
         ),
     ]
 
@@ -223,7 +220,9 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
         manga.native_name,
     )
     title_format = formatting_title_format(manga.title_format)
-    description = formatting_description(manga.description)
+    description = formatting_description(
+        escape_html_tags(manga.description, "lxml"),
+    )
     genres = formatting_genres(manga.genres)
     source = formatting_source(manga.url)
 
@@ -240,7 +239,7 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
                 escape_html_tags(description, "lxml"),
                 need_cut_length,
             ),
-        ) + "... (so long description)"
+        ) + html.bold("... (so long description)")
 
     text = (
         "Titles:\n{titles}\n\n"
@@ -265,19 +264,19 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
 
             if button_text.endswith("previous"):
                 buttons[row_index][button_index].callback_data = (
-                    f"manga_preview_page {page - 1} {manga_name}"
+                    f"preview {page - 1} {manga_name}"
                 )
             elif button_text.startswith("next"):
                 buttons[row_index][button_index].callback_data = (
-                    f"manga_preview_page {page + 1} {manga_name}"
+                    f"preview {page + 1} {manga_name}"
                 )
             elif button_text.startswith("relations"):
-                buttons[row_index][button_index].callback_data = (
-                    f"manga_relations {manga.id}"
+                buttons[row_index][button_index].switch_inline_query_current_chat = (
+                    f"relations {manga.id}"
                 )
             elif button_text.startswith("share"):
                 buttons[row_index][button_index].switch_inline_query = (
-                    f"manga_inline_preview_by_id {manga.id}"
+                    f"share {manga.id}"
                 )
 
     await m.edit_text(
@@ -285,90 +284,6 @@ async def manga_preview_switch_cmd(q: CallbackQuery, anilist: AnilistApi):
         parse_mode="HTML",
         disable_web_page_preview=False,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
-    )
-    await q.answer()
-
-
-async def manga_relations_cmd(q: CallbackQuery, anilist: AnilistApi):
-    _, manga_id = q.data.split(maxsplit=1)
-
-    try:
-        manga_relations = await anilist.manga_relations_by_id(manga_id)
-    except ServerError as e:
-        logger.exception(
-            "Handling error!",
-            error=e,
-            query=q,
-        )
-
-        text = (
-            "The source have some problems, repeat your request later!"
-        )
-
-        await q.answer(
-            text=text,
-            show_alert=True,
-            cache_time=5,
-        )
-        return
-
-    relations = manga_relations.relations
-
-    if not relations:
-        text = (
-            "Relations for this manga not found!"
-        )
-
-        await q.answer(
-            text=text,
-            show_alert=True,
-            cache_time=30,
-        )
-        return
-
-    texts = []
-    for index, manga in enumerate(relations, start=1):
-        titles = formatting_titles(
-            manga.english_name,
-            manga.romaji_name,
-            manga.native_name,
-        )
-        title_format = formatting_title_format(manga.title_format)
-        relation_type = formatting_relation_type(manga.relation_type)
-        source = formatting_source(manga.url)
-
-        text = (
-            "{index}. "
-            "Titles:\n{titles}\n\n"
-            "Format: {title_format}\n"
-            "Relation: {relation_type}\n\n"
-            "{source}"
-        ).format(
-            index=index,
-            titles=titles,
-            title_format=title_format,
-            relation_type=relation_type,
-            source=source,
-        )
-
-        texts.append(text)
-
-        if index == MAX_COUNT_RELATIONS:
-            text = html.bold(
-                "\nSo many relations! " + 
-                html.link("To the original", manga_relations.url)
-            )
-
-            texts.append(text)
-            break
-
-    text = "Relations:\n\n" + "\n--------\n".join(texts)
-
-    await q.message.reply(
-        text=text,
-        parse_mode="HTML",
-        disable_web_page_preview=True,
-        disable_notification=False,
     )
     await q.answer()
 
@@ -408,7 +323,9 @@ async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
         manga.native_name,
     )
     title_format = formatting_title_format(manga.title_format)
-    description = formatting_description(manga.description)
+    description = formatting_description(
+        escape_html_tags(manga.description, "lxml"),
+    )
     genres = formatting_genres(manga.genres)
     source = formatting_source(manga.url)
 
@@ -445,12 +362,6 @@ async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
         manga.title_format,
     )
 
-    buttons = [
-        InlineKeyboardButton(
-            text="Relations",
-            switch_inline_query=f"manga_inline_relations {manga.id}",
-        ),
-    ]
     manga_preview = InlineQueryResultArticle(
         id=manga_id,
         title=titles_for_inline,
@@ -459,7 +370,6 @@ async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
             parse_mode="HTML",
             disable_web_page_preview=False,
         ),
-        reply_markup=InlineKeyboardMarkup(row_width=2).add(*buttons),
         description=description_for_inline,
         thumb_url=manga.banner_image_url,
     )
@@ -471,7 +381,7 @@ async def manga_share_cmd(q: InlineQuery, anilist: AnilistApi):
     )
 
 
-async def manga_relations_inline_cmd(q: InlineQuery, anilist: AnilistApi):
+async def manga_relations_cmd(q: InlineQuery, anilist: AnilistApi):
     _, manga_id = q.query.split(maxsplit=1)
     manga_id = int(manga_id)
 
@@ -488,14 +398,11 @@ async def manga_relations_inline_cmd(q: InlineQuery, anilist: AnilistApi):
 
         return
 
-    relations = manga_relations.relations
-
-    if not relations:
+    if not manga_relations:
         return
 
     results = []
-    texts = []
-    for index, manga in enumerate(relations, start=1):
+    for manga in manga_relations:
         titles = formatting_titles(
             manga.english_name,
             manga.romaji_name,
@@ -506,27 +413,12 @@ async def manga_relations_inline_cmd(q: InlineQuery, anilist: AnilistApi):
             manga.romaji_name,
             manga.native_name,
         )
+
         title_format = formatting_title_format(manga.title_format)
-        relation_type = formatting_relation_type(manga.relation_type)
-        source = formatting_source(manga.url)
 
-        text = (
-            "{index}. "
-            "Titles:\n{titles}\n\n"
-            "Format: {title_format}\n"
-            "Relation: {relation_type}\n\n"
-            "{source}"
-        ).format(
-            index=index,
-            titles=titles,
-            title_format=title_format,
-            relation_type=relation_type,
-            source=source,
+        description = formatting_description(
+            escape_html_tags(manga.description, "lxml"),
         )
-        text_for_inline = text + html.bold(
-            "\n\nUse bot's functional for more info!",
-        )
-
         description_for_inline = formatting_description_for_inline(
             title_format=formatting_title_format_for_inline(
                 manga.title_format,
@@ -536,42 +428,51 @@ async def manga_relations_inline_cmd(q: InlineQuery, anilist: AnilistApi):
             ),
         )
 
+        genres = formatting_genres(manga.genres)
+        source = formatting_source(manga.url)
+
+        text_length = all_text_length(
+            titles, description,
+            genres, source,
+        )
+
+        if text_length > MAX_TEXT_LENGHT:
+            need_cut_length = text_length - MAX_TEXT_LENGHT
+
+            description = formatting_description(
+                cut_description(
+                    escape_html_tags(description, "lxml"),
+                    need_cut_length,
+                ),
+            ) + html.bold("... (so long description)")
+
+        text = (
+            "Titles:\n{titles}\n\n"
+            "Format: {title_format}\n\n"
+            "Description: {description}\n\n"
+            "Genres: {genres}\n\n"
+            "{source}"
+        ).format(
+            titles=titles,
+            title_format=title_format,
+            description=description,
+            genres=genres,
+            source=source,
+        )
+
         manga_relation_preview = InlineQueryResultArticle(
             id=manga.id,
             title=titles_for_inline,
             input_message_content=InputTextMessageContent(
-                message_text=text_for_inline,
+                message_text=text,
                 parse_mode="HTML",
-                disable_web_page_preview=True,
+                disable_web_page_preview=False,
             ),
             description=description_for_inline,
             thumb_url=manga.banner_image_url,
         )
 
         results.append(manga_relation_preview)
-
-        if index == MAX_COUNT_RELATIONS:
-            text = html.bold(
-                "\nSo many relations. " + 
-                html.link("To the original", manga_relations.url)
-            )
-
-            texts.append(text)
-        elif index < MAX_COUNT_RELATIONS:
-            texts.append(text)
-
-    text = "Relations:\n\n" + "\n--------\n".join(texts)
-
-    manga_relations_preview = InlineQueryResultArticle(
-        id=manga_id,
-        title="Click for send the manga's relations together!",
-        input_message_content=InputTextMessageContent(
-            message_text=text,
-            parse_mode="HTML",
-            disable_web_page_preview=True,
-        ),
-    )
-    results.insert(0, manga_relations_preview)
 
     await q.answer(
         results=results,
@@ -593,23 +494,18 @@ def register_manga_handlers(dp: Dispatcher):
     )
     dp.register_callback_query_handler(
         manga_preview_switch_cmd,
-        Text(startswith="manga_preview_page"),
-        state="*",
-    )
-    dp.register_callback_query_handler(
-        manga_relations_cmd,
-        Text(startswith="manga_relations"),
+        Text(startswith="preview"),
         state="*",
     )
     dp.register_inline_handler(
         manga_share_cmd,
-        Text(startswith="manga_inline_preview_by_id"),
+        Text(startswith="share"),
         CorrectId(is_correct_id=True),
         state="*",
     )
     dp.register_inline_handler(
-        manga_relations_inline_cmd,
-        Text(startswith="manga_inline_relations"),
+        manga_relations_cmd,
+        Text(startswith="relations"),
         CorrectId(is_correct_id=True),
         state="*",
     )

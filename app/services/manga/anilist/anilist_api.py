@@ -3,7 +3,7 @@ from typing import Optional
 from aiohttp import ClientResponse, ClientSession, ClientTimeout
 from app.services.manga.anilist.exceptions import MangaNotFound, ServerError
 from app.services.manga.anilist.schemas import MangaPreview, MangaRelation
-from app.services.manga.anilist.schemas.manga import MangaRelations
+from app.services.manga.anilist.schemas.manga import MangaRelation
 from app.text_utils.html_formatting import escape_html_tags_or_none
 from structlog import get_logger
 from structlog.stdlib import BoundLogger
@@ -196,7 +196,7 @@ class AnilistApi:
             genres=data["genres"],
         )
 
-    async def manga_relations_by_id(self, id: int) -> MangaRelations:
+    async def manga_relations_by_id(self, id: int) -> list[MangaRelation]:
         query = """
         query ($id: Int) {
             Media(id: $id) {
@@ -212,11 +212,12 @@ class AnilistApi:
                             format
                             siteUrl
                             bannerImage
+                            description
+                            genres
                         }
                         relationType
                     }
                 }
-                siteUrl
             }
         }
         """
@@ -238,12 +239,12 @@ class AnilistApi:
         relations = data["relations"]
         edges = relations["edges"]
 
-        manga_relations: list[MangaRelation] = []
+        relations = []
         for edge in edges:
             node = edge["node"]
             title = node["title"]
 
-            manga_relations.append(
+            relations.append(
                 MangaRelation(
                     id=node["id"],
                     english_name=escape_html_tags_or_none(title["english"]),
@@ -252,10 +253,9 @@ class AnilistApi:
                     title_format=node["format"],
                     url=node["siteUrl"],
                     banner_image_url=node["bannerImage"],
+                    description=node["description"],
+                    genres=node["genres"],
                     relation_type=edge["relationType"],
                 ),
             )
-        return MangaRelations(
-            relations=manga_relations,
-            url=data["siteUrl"],
-        )
+        return relations
