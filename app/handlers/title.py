@@ -94,6 +94,7 @@ async def title_preview_cmd(q: CallbackQuery, anilist: AnilistApi):
             parse_mode=None,
             disable_web_page_preview=True,
         )
+        await q.answer(cache_time=30)
         return
     except ServerError as e:
         logger.exception(
